@@ -53,6 +53,7 @@ func GetNBNSuggestions(address string) ([]NbnLapi, error) {
 	thisUrl := fmt.Sprintf("%s%s", NBNUrl, encodedAddress)
 	method := "GET"
 	client := &http.Client{}
+	log.Println(thisUrl)
 	req, err := http.NewRequest(method, thisUrl, nil)
 	if err != nil {
 		fmt.Println(err)
