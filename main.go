@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -28,10 +28,16 @@ func main() {
 func prettyPrint(nbnLocations []NbnLapi) {
 	b, err := json.MarshalIndent(nbnLocations, "", "  ")
 	if err != nil {
-		fmt.Printf("Error: %s", err)
+		log.Printf("Error: %s\n", err)
 		return
 	}
 	fmt.Println(string(b))
+}
+
+type NbnPlaces struct {
+	Timestamp   int64     `json:"timestamp"`
+	Source      string    `json:"source"`
+	Suggestions []NbnLapi `json:"suggestions"`
 }
 
 type NbnLapi struct {
@@ -41,29 +47,33 @@ type NbnLapi struct {
 	Longitude        float64 `json:"longitude" `
 }
 
-type NbnPlaces struct {
-	Timestamp   int64     `json:"timestamp"`
-	Source      string    `json:"source"`
-	Suggestions []NbnLapi `json:"suggestions"`
-}
-
 func GetNBNSuggestions(address string) ([]NbnLapi, error) {
 	encodedAddress := url.QueryEscape(address)
 	NBNUrl := "https://places.nbnco.net.au/places/v1/autocomplete?query="
 	thisUrl := fmt.Sprintf("%s%s", NBNUrl, encodedAddress)
-	method := "GET"
 	client := &http.Client{}
 	log.Println(thisUrl)
-	req, err := http.NewRequest(method, thisUrl, nil)
+	req, err := http.NewRequest(http.MethodGet, thisUrl, nil)
 	if err != nil {
 		fmt.Println(err)
 		return []NbnLapi{}, err
 	}
 	req.Header.Add("Referer", "https://www.nbnco.com.au/when-do-i-get-it/rollout-map.html")
 	res, err := client.Do(req)
-	defer res.Body.Close()
+	if err != nil {
+		log.Println(err)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
 
-	jsonData, err := ioutil.ReadAll(res.Body)
+		}
+	}(res.Body)
+
+	jsonData, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Println(err)
+	}
 
 	var lapiResponse NbnPlaces
 	err = json.Unmarshal(jsonData, &lapiResponse)
